@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">ARdevKitPlayer</string>
+    <string name="indicate_projectLoading">"Loading new project, this may take a minute"</string>
+</resources>
