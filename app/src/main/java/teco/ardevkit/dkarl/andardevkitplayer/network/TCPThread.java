@@ -1,6 +1,7 @@
 package teco.ardevkit.dkarl.andardevkitplayer.network;
 
-import android.content.res.Resources;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
 import android.util.Log;
@@ -14,12 +15,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -80,7 +83,7 @@ public class TCPThread extends Thread {
                 outputWriter = new OutputStreamWriter(outputStream);
                 int msgLength = inputStream.read(buffer, 0, buffer.length);
                 if (msgLength == -1) {
-                   Log.e(log, "incoming message length was 0");
+                    Log.e(log, "incoming message length was 0");
                 }
                 String incomingStr = new String(buffer);
                 if (incomingStr.contains("project"))
@@ -134,8 +137,7 @@ public class TCPThread extends Thread {
         int msgSize = 0;
 
         try {
-            InputStream incoming = inputStream;
-            msgSize = incoming.read(msgSizeByte, 0, msgSizeByte.length);
+            msgSize = inputStream.read(msgSizeByte, 0, msgSizeByte.length);
             msgSize = 0;
             for (int i = 0; i < msgSizeByte.length; i++) {
                 msgSize += unsignedToBytes(msgSizeByte[i]) << (8 * i);
@@ -143,11 +145,11 @@ public class TCPThread extends Thread {
             if (msgSize > 0) {
                 byte[] zipFile = new byte[1024];
                 int alreadyRead = 0;
-                FileOutputStream projectZipStream = new FileOutputStream(projectZip);
+                OutputStream projectZipStream = new BufferedOutputStream(new FileOutputStream(projectZip));
                 while (alreadyRead < msgSize) {
-                    int currentlyRead = incoming.read(zipFile, 0, 1024);
+                    int currentlyRead = inputStream.read(zipFile, 0, 1024);
                     if (currentlyRead != -1)
-                    projectZipStream.write(zipFile, 0, currentlyRead);
+                        projectZipStream.write(zipFile, 0, currentlyRead);
                     alreadyRead += currentlyRead;
                 }
                 projectZipStream.flush();
@@ -166,8 +168,6 @@ public class TCPThread extends Thread {
         }
 
 
-
-
     }
 
     private void handleDebugRequests(Socket socket) {
@@ -177,16 +177,12 @@ public class TCPThread extends Thread {
             process = Runtime.getRuntime().exec("logcat");
             BufferedReader bufferedReader = new BufferedReader(
                     new InputStreamReader(process.getInputStream()));
-
-            StringBuilder log=new StringBuilder();
-            String line = "";
+            String line;
             boolean endLoop = false;
             do {
                 if (bufferedReader.ready()) {
                     line = bufferedReader.readLine() + "\n";
                     outputWriter.write(line);
-                    outputWriter.flush();
-
                 }
                 if (inputStream.available() >= 2) {
                     byte[] incoming = new byte[inputStream.available()];
@@ -194,15 +190,15 @@ public class TCPThread extends Thread {
                     String incomingMSG = new String(incoming);
                     if (incomingMSG.contains("OK")) {
                         endLoop = true;
-                        Log.d(String.valueOf(log), "Debugcall sucessfully finished");
+                        Log.d(log, "Debugcall sucessfully finished");
                     } else {
-                        Log.d(String.valueOf(log), "Debugcall not sucessfully finished");
+                        Log.d(log, "Debugcall not sucessfully finished");
                     }
                 }
+                outputWriter.flush();
             } while (!endLoop || !socket.isConnected());
 
-        }
-        catch (IOException e)  {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -211,67 +207,52 @@ public class TCPThread extends Thread {
 
     private class UnzipTask extends AsyncTask<String, Integer, Boolean> {
         private String _location;
+        private Integer unZipThreadsRunning = 0;
+        private Long unZipProgress = Long.valueOf(0);
 
         @Override
         protected Boolean doInBackground(String... filePaths) {
-            if(android.os.Debug.isDebuggerConnected())
+            if (android.os.Debug.isDebuggerConnected())
                 android.os.Debug.waitForDebugger();
             if (filePaths.length != 2) {
                 this.cancel(false);
-            } else {
-                try  {
-                    _location = filePaths[1];
-                    File newFolder = new File(_location);
-                    newFolder.mkdir();
-                    FileInputStream countFile = new FileInputStream(filePaths[0]);
-                    ZipInputStream count = new ZipInputStream(countFile);
+            } else try {
+                _location = filePaths[1];
+                File newFolder = new File(_location);
+                newFolder.mkdir();
+                InputStream countFile = new BufferedInputStream(new FileInputStream(filePaths[0]));
+                ZipInputStream count = new ZipInputStream(countFile);
 
-                    ZipEntry ze = null;
-                    long length = 0;
-                    while ((ze = count.getNextEntry()) != null) {
-                        length+= ze.getSize();
-                    }
-                    count.close();
 
-                    main.reportMaxProgress(length);
+                ZipEntry ze;
+                long length = 0;
+                while ((ze = count.getNextEntry()) != null) {
+                    length += ze.getSize();
+                }
+                count.close();
 
-                    FileInputStream fin = new FileInputStream(filePaths[0]);
-                    ZipInputStream zin = new ZipInputStream(fin);
-                    ze= null;
-                    long allRead = 0;
-                    while ((ze = zin.getNextEntry()) != null) {
-                        String filename = ze.getName().replace('\\' , '/');
-                        Log.v("Decompress", "Unzipping " + filename);
+                main.reportMaxProgress(length);
 
-                        if (filename.contains("/")) {
-                            File currentFile = new File(_location + "/" + filename);
-                            File parentFolder = currentFile.getParentFile();
-                            if (!parentFolder.exists()) {
-                                parentFolder.mkdir();
-                            }
-                        }
 
-                        if(ze.isDirectory()) {
-                            _dirChecker(ze.getName());
-                        } else {
-                            FileOutputStream fout = new FileOutputStream(_location + filename);
-                            for (int c = zin.read(); c != -1; c = zin.read()) {
-                                fout.write(c);
-                                allRead ++;
-                                main.reportProgress(allRead);
-                            }
+                File zipToExtract = new File(filePaths[0]);
 
-                            zin.closeEntry();
-                            fout.flush();
-                            fout.close();
-                        }
-
-                    }
-                    zin.close();
-                } catch(Exception e) {
-                    Log.e("Decompress", "unzip", e);
+                int cpus = Runtime.getRuntime().availableProcessors();
+                ArrayList<Thread> unzipFileThreads = new ArrayList<Thread>();
+                for (int t = 0; t < cpus; t++) {
+                    UnzipOneFileThread thread = new UnzipOneFileThread(this,
+                            new ZipInputStream(new BufferedInputStream(
+                                    new FileInputStream(zipToExtract))), t, _location);
+                    thread.start();
+                    unzipFileThreads.add(thread);
                 }
 
+                for (Thread t : unzipFileThreads) {
+                    t.join();
+                }
+
+
+            } catch (Exception e) {
+                Log.e("ARDevkitPlayer-unzipT", "Unzip Error!", e);
             }
             return true;
         }
@@ -279,7 +260,7 @@ public class TCPThread extends Thread {
         private void _dirChecker(String dir) {
             File f = new File(_location + dir);
 
-            if(!f.isDirectory()) {
+            if (!f.isDirectory()) {
                 f.mkdirs();
             }
         }
@@ -289,18 +270,17 @@ public class TCPThread extends Thread {
             main.setProgressBarVisibility(false);
             main.setProgressBarIndeterminate(false);
             if (aBoolean) {
-                Log.d("ARDEVKITPlayer-unzip", "Unzip succesful");
+                Log.d("ARDevkitPlayer-unzipT", "Unzip succesful");
                 main.loadNewProject();
-            }
-            else
-                Log.d("ARDEVKITPlayer-unzip", "Unzip failed");
+            } else
+                Log.d("ARDevkitPlayer-unzipT", "Unzip failed");
         }
 
         @Override
         protected void onCancelled() {
             main.setProgressBarVisibility(false);
             main.setProgressBarIndeterminate(false);
-            Log.d("ARDEVKITPlayer-unzip", "Unzip failed");
+            Log.d("ARDevkitPlayer-unzipT", "Unzip failed");
         }
 
         @Override
@@ -308,8 +288,82 @@ public class TCPThread extends Thread {
             main.setProgressBarVisibility(false);
             main.setProgressBarIndeterminate(false);
         }
+
+        public void reportProgress(final long bytesExtracted) {
+            synchronized (unZipProgress) {
+                unZipProgress += bytesExtracted;
+                main.reportProgress(unZipProgress);
+            }
+        }
     }
 
+
+    private class UnzipOneFileThread extends Thread {
+
+        private ZipInputStream zin;
+        private int threadNumber;
+        private String extractionFolder;
+        private UnzipTask parent;
+
+
+        UnzipOneFileThread(UnzipTask parent, ZipInputStream zin, int threadNumber, String extractionFolder) {
+            this.parent = parent;
+            this.zin = zin;
+            this.threadNumber = threadNumber;
+            this.extractionFolder = extractionFolder;
+        }
+
+
+        @Override
+        public void run() {
+
+            int cpus = Runtime.getRuntime().availableProcessors();
+            try {
+                ZipEntry ze = zin.getNextEntry();
+                for (int i = 0; i < threadNumber; i++) {
+                    ze = zin.getNextEntry();
+                }
+
+                while (ze != null) {
+                    String filename = ze.getName().replace('\\', '/');
+                    Log.v("Decompress", "Unzipping " + filename);
+                    File currentFile = new File(extractionFolder + "/" + filename);
+                    if (filename.contains("/")) {
+                        File parentFolder = currentFile.getParentFile();
+                        if (!parentFolder.exists()) {
+                            parentFolder.mkdir();
+                        }
+                    }
+                    long unzippedBytesCount = 0;
+                    OutputStream fout = new BufferedOutputStream(new FileOutputStream(extractionFolder + filename));
+                    for (int c = zin.read(); c != -1; c = zin.read()) {
+                        if (++unzippedBytesCount % cpus == 0) {
+                            parent.reportProgress(unzippedBytesCount);
+                            unzippedBytesCount %= cpus;
+                        }
+                        fout.write(c);
+                    }
+                    Uri uri = Uri.parse("file://" + currentFile.getAbsolutePath());
+                    main.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, uri));
+
+                    parent.reportProgress(unzippedBytesCount);
+                    zin.closeEntry();
+                    fout.flush();
+                    fout.close();
+
+                    //skip next threadNumber entries
+                    for (int i = 0; i < cpus; i++) {
+                        ze = zin.getNextEntry();
+                    }
+                }
+
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
 
 }
 
