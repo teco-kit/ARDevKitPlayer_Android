@@ -2,6 +2,7 @@
 package teco.ardevkit.dkarl.andardevkitplayer;
 
 import android.content.Context;
+import android.media.MediaScannerConnection;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -103,11 +104,13 @@ public class ARELViewActivity extends ARELActivity
 
         if (projects.length > 2) {
             String oldestProjectPath = projectsFolder.getAbsolutePath() + "/" + projects[0];
+            File oldestProjectFolder = new File(oldestProjectPath);
             try {
                 FileUtils.deleteDirectory(new File(oldestProjectPath));
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            MediaScannerConnection.scanFile(getApplicationContext(), new String[]{oldestProjectFolder.getAbsolutePath()}, null, null);
         }
 
         mARELInterpreter.loadARELFile(newsetProjectPath + "/arelConfig.xml");
