@@ -9,7 +9,6 @@ import java.io.InputStream;
 import java.util.Arrays;
 
 import android.app.Activity;
-import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.media.MediaScannerConnection;
@@ -82,21 +81,24 @@ public class MainActivity extends Activity
         @Override
         protected void onPostExecute(Boolean result)
         {
-                String appname = context.getResources().getString(R.string.app_name);
-                File projectFolder = new File(Environment.getExternalStorageDirectory() +
-                        "/" + appname);
-                String[] projects = projectFolder.list(new FilenameFilter() {
-                    @Override
-                    public boolean accept(File file, String s) {
-                        File toTest = new File(file.getAbsolutePath() + "/" + s);
-                        if (toTest.isDirectory()) {
-                            return true;
-                        }
-
-                        return false;
+            String appname = context.getResources().getString(R.string.app_name);
+            File projectFolder = new File(Environment.getExternalStorageDirectory() +
+                    "/" + appname);
+            String[] projects = projectFolder.list(new FilenameFilter() {
+                @Override
+                public boolean accept(File file, String s) {
+                    File toTest = new File(file.getAbsolutePath() + "/" + s);
+                    if (toTest.isDirectory()) {
+                        return true;
                     }
-                });
+
+                    return false;
+                }
+            });
+            if (projects != null) {
                 Arrays.sort(projects);
+            }
+
                 if (!projectFolder.exists() || projects.length == 0) {
                     File firstSceneFolder = new File(projectFolder.getAbsolutePath() + "/2015-01-01_10_00_00/");
                     firstSceneFolder.mkdirs();
