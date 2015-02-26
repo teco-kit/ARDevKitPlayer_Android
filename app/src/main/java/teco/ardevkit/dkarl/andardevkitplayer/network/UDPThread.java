@@ -44,7 +44,6 @@ public class UDPThread extends Thread {
         while (running) {
             try {
                 udpSocket.receive(incoming);
-                byte[] data = incoming.getData();
                 String s = new String("OK: " + port);
                 //TODO: LOG incoming packet
                 DatagramPacket dp = new DatagramPacket(s.getBytes(), s.getBytes().length,
