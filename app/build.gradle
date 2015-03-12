@@ -6,7 +6,7 @@ android {
     compileSdkVersion 19
     buildToolsVersion '20.0.0'
     defaultConfig {
-        applicationId "teco.ardevkit.dkarl.andardevkitplayer"
+        applicationId "teco.ardevkit.andardevkitplayer"
         minSdkVersion 14
         targetSdkVersion 21
         versionCode 0002

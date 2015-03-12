@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:title="snapshot 1"
+        android:showAsAction="always"
+        android:visible="false"
+        android:id="@+id/snapshot1"
+        android:actionLayout="@layout/snapshotlayout" />
+    <item
+        android:title="snapshot 2"
+        android:showAsAction="always"
+        android:id="@+id/snapshot2"
+        android:visible="false"
+        android:actionLayout="@layout/snapshotlayout" />
+    <item
+        android:title="snapshot 3"
+        android:showAsAction="always"
+        android:visible="false"
+        android:actionLayout="@layout/snapshotlayout"
+        android:id="@+id/snapshot3" />
+    <item
+        android:title="snapshot 4"
+        android:showAsAction="always"
+        android:visible="false"
+        android:actionLayout="@layout/snapshotlayout"
+        android:id="@+id/snapshot4" />
+    <item
+        android:title="snapshot 5"
+        android:showAsAction="always"
+        android:visible="false"
+        android:actionLayout="@layout/snapshotlayout"
+        android:id="@+id/snapshot5" />
+
+
+    <item
+        android:title="Manage states"
+        android:id="@+id/saveLoadMenu"
+        android:icon="@android:drawable/ic_menu_save"
+        android:showAsAction="always"
+        android:actionLayout="@layout/snapshotlayout">
+
+    </item>
+    <item
+        android:id="@+id/pause"
+        android:icon="@android:drawable/ic_media_pause"
+        android:onClick="handlePause"
+        android:showAsAction="always"
+        android:title="@string/pause"></item>
+
+</menu>

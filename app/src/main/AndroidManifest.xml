@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="teco.ardevkit.dkarl.andardevkitplayer"
+    package="teco.ardevkit.andardevkitplayer"
     android:installLocation="preferExternal"
     android:versionCode="0002"
     android:versionName="0.2">
@@ -70,8 +70,9 @@
         </activity>
         <activity
             android:name=".ARELViewActivity"
-            android:configChanges="fontScale|keyboard|keyboardHidden|locale|mnc|mcc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|touchscreen">
-            android:theme="@style/Theme.FullScreen" >
+            android:configChanges="fontScale|keyboard|keyboardHidden|locale|mnc|mcc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|touchscreen"
+            android:screenOrientation="landscape">
+        android:theme="@style/Theme.FullScreen" >
         </activity>
     </application>
 

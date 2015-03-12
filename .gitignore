@@ -24,3 +24,6 @@ proguard/
 
 # Log Files
 *.log
+
+# Metaio Basic license signature
+signature_teco.xml

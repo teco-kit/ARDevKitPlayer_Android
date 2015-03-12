@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
+
+    <ImageView
+        android:id="@+id/stateRowImage"
+        android:layout_width="@dimen/StateManager_PreviewWidth"
+        android:layout_height="match_parent"
+        android:adjustViewBounds="true"
+        android:scaleType="fitCenter" />
+
+    <TextView
+        android:id="@+id/stateRowText"
+        android:layout_width="fill_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="left|center_vertical"
+        android:layout_weight="5.40"
+        android:gravity="center_vertical"
+        android:text="TextView"
+        android:layout_marginLeft="5dp" />
+
+    <ImageButton
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:id="@+id/deleteButton"
+        android:layout_gravity="center_vertical"
+        android:src="@android:drawable/ic_menu_delete" />
+
+</LinearLayout>

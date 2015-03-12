@@ -1,4 +1,4 @@
-package teco.ardevkit.dkarl.andardevkitplayer.network;
+package teco.ardevkit.andardevkitplayer.network;
 
 import android.util.Log;
 
@@ -7,8 +7,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 
-import teco.ardevkit.dkarl.andardevkitplayer.ARELViewActivity;
-import teco.ardevkit.dkarl.andardevkitplayer.R;
+import teco.ardevkit.andardevkitplayer.ARELViewActivity;
+import teco.ardevkit.andardevkitplayer.R;
 
 /**
  * Created by dkarl on 29.01.15.
@@ -35,7 +35,7 @@ public class UDPThread extends Thread {
     @Override
     public void interrupt() {
         super.interrupt();
-        if (udpSocket!=null)
+        if (udpSocket != null)
             udpSocket.close();
     }
 
@@ -49,12 +49,12 @@ public class UDPThread extends Thread {
                 DatagramPacket dp = new DatagramPacket(s.getBytes(), s.getBytes().length,
                         incoming.getAddress(), incoming.getPort());
                 udpSocket.send(dp);
-             //   Thread.sleep(100);
+                //   Thread.sleep(100);
             } catch (IOException e) {
                 e.printStackTrace();
 //            } catch (InterruptedException e) {
 //                e.printStackTrace();
-           }
+            }
         }
         Log.d(logTag, "UDP thread closed");
         udpSocket.close();

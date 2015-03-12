@@ -1,4 +1,4 @@
-package teco.ardevkit.dkarl.andardevkitplayer.network;
+package teco.ardevkit.andardevkitplayer.network;
 
 import android.content.Intent;
 import android.net.Uri;
@@ -27,8 +27,8 @@ import java.util.Date;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import teco.ardevkit.dkarl.andardevkitplayer.ARELViewActivity;
-import teco.ardevkit.dkarl.andardevkitplayer.R;
+import teco.ardevkit.andardevkitplayer.ARELViewActivity;
+import teco.ardevkit.andardevkitplayer.R;
 
 
 /**

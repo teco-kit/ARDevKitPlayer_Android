@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <integer name="networkPort">12345</integer>
+    <dimen name="StateManager_PreviewWidth">200dp</dimen>
 
 
 </resources>
