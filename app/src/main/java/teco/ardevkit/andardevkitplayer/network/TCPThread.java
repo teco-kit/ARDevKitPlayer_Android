@@ -27,7 +27,7 @@ import java.util.Date;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import teco.ardevkit.andardevkitplayer.ARELViewActivity;
+import teco.ardevkit.andardevkitplayer.PausableARELActivity;
 import teco.ardevkit.andardevkitplayer.R;
 
 
@@ -36,20 +36,21 @@ import teco.ardevkit.andardevkitplayer.R;
  */
 public class TCPThread extends Thread {
     private ServerSocket serverSocket;
-    private final int port = ARELViewActivity.getContext().getResources().getInteger(R.integer.networkPort);
+    private int port;
     public volatile boolean running = true;
     private Socket socket;
     private BufferedInputStream inputStream;
     private BufferedOutputStream outputStream;
     private Reader inputReader;
     private Writer outputWriter;
-    private ARELViewActivity main;
+    private PausableARELActivity main;
     private String log = "TCPThread";
 
 
-    public TCPThread(ARELViewActivity main) {
+    public TCPThread(PausableARELActivity main) {
         super();
         this.main = main;
+        this.port = main.getResources().getInteger(R.integer.networkPort);
         try {
             serverSocket = new ServerSocket(port);
         } catch (IOException e) {
@@ -126,7 +127,7 @@ public class TCPThread extends Thread {
         long currentTime = System.currentTimeMillis();
         String currentTimeStr = sdf.format(new Date(currentTime));
 
-        String appname = ARELViewActivity.getContext().getString(R.string.app_name);
+        String appname = main.getString(R.string.app_name);
         File programFolder = new File(Environment.getExternalStorageDirectory() + "/" + appname);
         File projectZip = new File(programFolder.getAbsolutePath() + "/currentproject.zip");
         File projectFolder = new File(programFolder.getAbsolutePath() + "/" + currentTimeStr + "/");

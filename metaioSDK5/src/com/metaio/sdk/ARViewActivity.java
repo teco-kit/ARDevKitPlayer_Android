@@ -415,8 +415,8 @@ public abstract class ARViewActivity extends FragmentActivity implements MetaioS
 				mRendererInitialized = true;
 
 				final IMetaioSDKCallback callback = getMetaioSDKCallbackHandler();
-				if (callback != null)
-					metaioSDK.registerCallback(callback);
+                //if (callback != null)
+                //	metaioSDK.registerCallback(callback);
 
 				// Add loadContent to the event queue to allow rendering to start
 				mSurfaceView.queueEvent(new Runnable()

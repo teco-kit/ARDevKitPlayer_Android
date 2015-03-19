@@ -69,7 +69,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ARELViewActivity"
+            android:name=".PausableARELActivity"
             android:configChanges="fontScale|keyboard|keyboardHidden|locale|mnc|mcc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|touchscreen"
             android:screenOrientation="landscape">
         android:theme="@style/Theme.FullScreen" >

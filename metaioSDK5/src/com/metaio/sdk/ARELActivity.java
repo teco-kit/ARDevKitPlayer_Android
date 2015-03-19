@@ -1,9 +1,6 @@
 // Copyright 2007-2014 metaio GmbH. All rights reserved.
 package com.metaio.sdk;
 
-import java.io.File;
-import java.util.Date;
-
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
@@ -23,6 +20,9 @@ import com.metaio.sdk.jni.IARELInterpreterCallback;
 import com.metaio.sdk.jni.IGeometry;
 import com.metaio.sdk.jni.IMetaioSDKCallback;
 import com.metaio.sdk.jni.Vector3d;
+
+import java.io.File;
+import java.util.Date;
 
 /**
  * This is the base activity that can be used to load and run AREL scenes
@@ -190,13 +190,11 @@ public class ARELActivity extends ARViewActivity
 		super.onSurfaceCreated();
 		MetaioDebug.log("ARELActivity.onSurfaceCreated");
 
-		if (mGestureHandler == null)
-		{
-			// create gesture handler and initialize AREL interpreter
-			mGestureHandler = new GestureHandlerAndroid(metaioSDK, GestureHandler.GESTURE_ALL, mWebView, mSurfaceView);
-			mARELInterpreter.initialize(metaioSDK, mGestureHandler);
-		}
-		else
+        if (mGestureHandler == null) {
+            // create gesture handler and initialize AREL interpreter
+            mGestureHandler = new GestureHandlerAndroid(metaioSDK, GestureHandler.GESTURE_ALL, mWebView, mSurfaceView);
+            mARELInterpreter.initialize(metaioSDK, mGestureHandler);
+        } else
 		{
 			// Update reference to the GLSurfaceView
 			mGestureHandler.setGLSurfaceView(mSurfaceView);

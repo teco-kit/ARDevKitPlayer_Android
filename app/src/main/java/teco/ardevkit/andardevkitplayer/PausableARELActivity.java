@@ -1,4 +1,3 @@
-// Copyright 2007-2013 Metaio GmbH. All rights reserved.
 package teco.ardevkit.andardevkitplayer;
 
 import android.annotation.SuppressLint;
@@ -9,7 +8,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.media.MediaScannerConnection;
-import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.util.Log;
@@ -19,7 +17,6 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -28,7 +25,6 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.metaio.sdk.ARELActivity;
 import com.metaio.sdk.MetaioDebug;
 import com.metaio.sdk.jni.Camera;
 import com.metaio.sdk.jni.CameraVector;
@@ -53,14 +49,16 @@ import java.util.List;
 import teco.ardevkit.andardevkitplayer.network.TCPThread;
 import teco.ardevkit.andardevkitplayer.network.UDPThread;
 
-public class ARELViewActivity extends ARELActivity 
-{
+/**
+ * Created by dkarl on 19.03.15.
+ */
+public class PausableARELActivity extends CombinedCallbackActivity {
+
     private UDPThread udpThread;
     private TCPThread tcpThread;
     private String log = "ARELVIEWActivity-log";
     private long maxProgressFileSize = 0;
     private int oldProgress = 0;
-    private static Context context;
     private MenuItem pauseItem;
     private boolean isPaused;
     private boolean stateLoaded;
@@ -68,72 +66,52 @@ public class ARELViewActivity extends ARELActivity
     private Handler uiHandler = new Handler();
     private boolean requestImageSave = false;
     private File tempPauseImage;
-    private Activity activity = this;
+    protected Activity activity = this;
     private String stateSavePath;
     IMetaioSDKCallback mSDKCallback;
 
-	@Override
-	protected int getGUILayout() 
-	{
-		// Attaching layout to the activity
-		return R.layout.template;
-	}
+    @Override
+    protected int getGUILayout() {
+        // Attaching layout to the activity
+        return R.layout.template;
+    }
 
     @Override
     protected IMetaioSDKCallback getMetaioSDKCallbackHandler() {
+        if (mSDKCallback == null)
+            mSDKCallback = new MetaioSDKCallbackHandler();
         return mSDKCallback;
     }
 
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        mSDKCallback = new MetaioSDKCallbackHandler();
-        this.requestWindowFeature(Window.FEATURE_PROGRESS);
-        context = this;
-        stateSavePath = Environment.getExternalStorageDirectory()
-                + "/" + getResources().getString(R.string.app_name) + "/states/";
-        tempPauseImage = new File(stateSavePath + "temp/pause.jpg");
-        if (!tempPauseImage.getParentFile().exists()) {
-            tempPauseImage.getParentFile().mkdirs();
-        }
-    }
-
-    public static Context getContext() {
-        return context;
-    }
 
     @Override
     protected void onResume() {
+        stateSavePath = Environment.getExternalStorageDirectory()
+                + "/" + getResources().getString(R.string.app_name) + "/states/";
+        tempPauseImage = new File(stateSavePath + "temp/pause.jpg");
         setProgressBarVisibility(false);
         Log.d(log, "ARELViewActivity.onResume");
-        super.onResume();
         if (udpThread == null) {
-            udpThread = new UDPThread();
+            udpThread = new UDPThread(this);
             udpThread.start();
         }
         if (tcpThread == null) {
             tcpThread = new TCPThread(this);
             tcpThread.start();
         }
-    }
-
-    @Override
-    protected void loadContents() {
-        Log.d(log, "ARELVIEWActivity.loadContents");
-        metaioSDK.registerCallback(mSDKCallback);
-        super.loadContents();
+        super.onResume();
     }
 
     @Override
     protected void onStop() {
         Log.d(log, "ARELViewActivity.onPause");
-        super.onPause();
         udpThread.running = false;
         udpThread.interrupt();
         udpThread = null;
         tcpThread.running = false;
         tcpThread.interrupt();
         tcpThread = null;
+        super.onStop();
     }
 
     public boolean loadNewProject() {
@@ -333,8 +311,6 @@ public class ARELViewActivity extends ARELActivity
 
     public class StateManagerDialog extends Dialog {
 
-        List<String> currentSelection = new ArrayList<String>();
-
         public StateManagerDialog(final Context context, final IMetaioSDKAndroid metaioSDK) {
             super(context);
             this.setTitle("State Manager");
@@ -455,6 +431,7 @@ public class ARELViewActivity extends ARELActivity
         public void onClick(View view) {
             // generate file path for current state
             if (!isPaused) {
+                metaioSDK.registerCallback(mSDKCallback);
                 requestImageSave = true;
                 metaioSDK.requestCameraImage();
             } else {
@@ -509,6 +486,7 @@ public class ARELViewActivity extends ARELActivity
         }
 
     }
+
 
     final class MetaioSDKCallbackHandler extends IMetaioSDKCallback {
 
@@ -600,5 +578,6 @@ public class ARELViewActivity extends ARELActivity
             }
         }
     }
+
 
 }

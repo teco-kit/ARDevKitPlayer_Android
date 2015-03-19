@@ -1,5 +1,6 @@
 package teco.ardevkit.andardevkitplayer.network;
 
+import android.app.Activity;
 import android.util.Log;
 
 import java.io.IOException;
@@ -7,7 +8,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 
-import teco.ardevkit.andardevkitplayer.ARELViewActivity;
+import teco.ardevkit.andardevkitplayer.PausableARELActivity;
 import teco.ardevkit.andardevkitplayer.R;
 
 /**
@@ -16,13 +17,16 @@ import teco.ardevkit.andardevkitplayer.R;
 public class UDPThread extends Thread {
     private DatagramSocket udpSocket;
     private DatagramPacket incoming;
-    private int port = ARELViewActivity.getContext().getResources().getInteger(R.integer.networkPort);
+    private int port;
     private byte[] buffer = new byte[65536];
     public volatile boolean running = true;
     private String logTag = "ardevkit-udp";
+    private Activity parent;
 
-    public UDPThread() {
+    public UDPThread(PausableARELActivity parent) {
         super();
+        this.parent = parent;
+        this.port = parent.getResources().getInteger(R.integer.networkPort);
         Log.d(logTag, "UDP thread created");
         try {
             udpSocket = new DatagramSocket(port);

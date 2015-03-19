@@ -126,7 +126,7 @@ public class MainActivity extends Activity {
 
             final String arelConfigFilePath = newestProjectPath + "/arelConfig.xml";
             MetaioDebug.log("arelConfig to be passed to intent: " + arelConfigFilePath);
-            Intent intent = new Intent(getApplicationContext(), teco.ardevkit.andardevkitplayer.ARELViewActivity.class);
+            Intent intent = new Intent(getApplicationContext(), PausableARELActivity.class);
             intent.putExtra(getPackageName() + ".AREL_SCENE", arelConfigFilePath);
             startActivity(intent);
 
