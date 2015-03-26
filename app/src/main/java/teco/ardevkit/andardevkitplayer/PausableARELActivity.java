@@ -8,6 +8,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.media.MediaScannerConnection;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.util.Log;
@@ -17,6 +18,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -25,26 +27,36 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.metaio.sdk.MetaioDebug;
+import com.metaio.sdk.ARELActivity;
 import com.metaio.sdk.jni.Camera;
 import com.metaio.sdk.jni.CameraVector;
 import com.metaio.sdk.jni.IMetaioSDKAndroid;
 import com.metaio.sdk.jni.IMetaioSDKCallback;
-import com.metaio.sdk.jni.ImageStruct;
 import com.metaio.sdk.jni.Vector2di;
 
 import org.apache.commons.io.FileUtils;
+import org.w3c.dom.Attr;
+import org.w3c.dom.Document;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 import teco.ardevkit.andardevkitplayer.network.TCPThread;
 import teco.ardevkit.andardevkitplayer.network.UDPThread;
@@ -52,7 +64,7 @@ import teco.ardevkit.andardevkitplayer.network.UDPThread;
 /**
  * Created by dkarl on 19.03.15.
  */
-public class PausableARELActivity extends CombinedCallbackActivity {
+public class PausableARELActivity extends ARELActivity {
 
     private UDPThread udpThread;
     private TCPThread tcpThread;
@@ -64,10 +76,11 @@ public class PausableARELActivity extends CombinedCallbackActivity {
     private boolean stateLoaded;
     private Menu mMenu;
     private Handler uiHandler = new Handler();
-    private boolean requestImageSave = false;
     private File tempPauseImage;
     protected Activity activity = this;
     private String stateSavePath;
+    private String defaultTrackingFile;
+    private String noFuserTrackingFile;
     IMetaioSDKCallback mSDKCallback;
 
     @Override
@@ -77,12 +90,10 @@ public class PausableARELActivity extends CombinedCallbackActivity {
     }
 
     @Override
-    protected IMetaioSDKCallback getMetaioSDKCallbackHandler() {
-        if (mSDKCallback == null)
-            mSDKCallback = new MetaioSDKCallbackHandler();
-        return mSDKCallback;
+    public void onCreate(Bundle savedInstanceState) {
+        requestWindowFeature(Window.FEATURE_PROGRESS);
+        super.onCreate(savedInstanceState);
     }
-
 
     @Override
     protected void onResume() {
@@ -100,6 +111,11 @@ public class PausableARELActivity extends CombinedCallbackActivity {
             tcpThread.start();
         }
         super.onResume();
+
+        String currentConfig = getIntent().getStringExtra(getPackageName() + INTENT_EXTRA_AREL_SCENE);
+        String currentProject = new File(currentConfig).getParent();
+        createFuserLessTracking(currentProject);
+
     }
 
     @Override
@@ -122,7 +138,7 @@ public class PausableARELActivity extends CombinedCallbackActivity {
             @Override
             public boolean accept(File file, String s) {
                 File toTest = new File(file.getAbsolutePath() + "/" + s);
-                if (toTest.isDirectory()) {
+                if (toTest.isDirectory() && !s.equals("states")) {
                     return true;
                 }
 
@@ -146,6 +162,7 @@ public class PausableARELActivity extends CombinedCallbackActivity {
         }
 
         mARELInterpreter.loadARELFile(newsetProjectPath + "/arelConfig.xml");
+        createFuserLessTracking(newsetProjectPath);
 
 
         return true;
@@ -155,7 +172,21 @@ public class PausableARELActivity extends CombinedCallbackActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if (isPaused || stateLoaded) {
+                    MenuItem item = mMenu.findItem(R.id.pause);
+                    item.setIcon(android.R.drawable.ic_media_pause);
+                    item.setTitle(R.string.pause);
+                    isPaused = false;
+                    stateLoaded = false;
+                    mSurfaceView.queueEvent(new Runnable() {
+                        @Override
+                        public void run() {
+                            startCamera();
+                        }
+                    });
+                }
                 setProgressBarVisibility(true);
+                setProgress(0);
                 Toast t = Toast.makeText(getApplicationContext(),
                         getResources().getString(R.string.indicate_projectLoading),
                         Toast.LENGTH_LONG);
@@ -294,12 +325,17 @@ public class PausableARELActivity extends CombinedCallbackActivity {
     private class OnSnapshotClickListener implements ImageButton.OnClickListener {
         @Override
         public void onClick(View v) {
-            String fileName = v.getContentDescription().toString();
+            final String fileName = v.getContentDescription().toString();
             final File toLoad = new File(fileName);
             // make metaio open said file and allow for resuming
             isPaused = false;
-            pauseItem.setEnabled(false);
-            mSurfaceView.queueEvent(new LoadImageContinuousRunnable(toLoad, 25));
+            metaioSDK.setTrackingConfiguration(noFuserTrackingFile);
+            mSurfaceView.queueEvent(new Runnable() {
+                @Override
+                public void run() {
+                    metaioSDK.setImage(fileName);
+                }
+            });
             Log.i("State", "Previous state loaded");
 
             pauseItem.setIcon(android.R.drawable.ic_media_play);
@@ -374,8 +410,13 @@ public class PausableARELActivity extends CombinedCallbackActivity {
                         final File toLoad = new File(stateSavePath + objects.get(position));
                         // make metaio open said file and allow for resuming
                         isPaused = false;
-                        pauseItem.setEnabled(false);
-                        mSurfaceView.queueEvent(new LoadImageContinuousRunnable(toLoad, 25));
+                        metaioSDK.setTrackingConfiguration(noFuserTrackingFile);
+                        mSurfaceView.queueEvent(new Runnable() {
+                            @Override
+                            public void run() {
+                                metaioSDK.setImage(toLoad.getAbsolutePath());
+                            }
+                        });
                         Log.i("State", "Previous state loaded");
 
                         pauseItem.setIcon(android.R.drawable.ic_media_play);
@@ -431,9 +472,22 @@ public class PausableARELActivity extends CombinedCallbackActivity {
         public void onClick(View view) {
             // generate file path for current state
             if (!isPaused) {
-                metaioSDK.registerCallback(mSDKCallback);
-                requestImageSave = true;
-                metaioSDK.requestCameraImage();
+                Long currentTime = System.currentTimeMillis();
+                SimpleDateFormat formatter = new SimpleDateFormat(
+                        "yyyy-MM-dd-HH:mm:ss");
+                String currentTimestamp = formatter.format(new Date(currentTime));
+                final File toSave = new File(stateSavePath + currentTimestamp.toString() + ".jpg");
+                metaioSDK.requestCameraImage(toSave.getAbsolutePath());
+
+                //wait and do stuff
+                uiHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        activity.invalidateOptionsMenu();
+                    }
+                }, 500);
+
             } else {
                 Long currentTime = System.currentTimeMillis();
                 SimpleDateFormat formatter = new SimpleDateFormat(
@@ -441,6 +495,13 @@ public class PausableARELActivity extends CombinedCallbackActivity {
                 String currentTimestamp = formatter.format(new Date(currentTime));
                 final File toSave = new File(stateSavePath + currentTimestamp.toString() + ".jpg");
                 tempPauseImage.renameTo(toSave);
+                uiHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        activity.invalidateOptionsMenu();
+                    }
+                }, 500);
 
             }
             Toast.makeText(activity, "Current state saved", Toast.LENGTH_SHORT).show();
@@ -465,11 +526,25 @@ public class PausableARELActivity extends CombinedCallbackActivity {
                 item.setIcon(android.R.drawable.ic_media_play);
                 item.setTitle(R.string.resume);
                 this.isPaused = true;
-                metaioSDK.requestCameraImage();
+                metaioSDK.requestCameraImage(tempPauseImage.getAbsolutePath());
+                metaioSDK.setTrackingConfiguration(noFuserTrackingFile);
+
+                // wait and set image
+                mSurfaceView.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (tempPauseImage.exists())
+                            metaioSDK.setImage(tempPauseImage.getAbsolutePath());
+                        else
+                            mSurfaceView.postDelayed(this, 100);
+                    }
+                }, 400);
+
             } else {
                 item.setIcon(android.R.drawable.ic_media_pause);
                 item.setTitle(R.string.pause);
                 this.isPaused = false;
+                metaioSDK.setTrackingConfiguration(defaultTrackingFile);
                 this.startCamera();
             }
         } else {
@@ -477,6 +552,7 @@ public class PausableARELActivity extends CombinedCallbackActivity {
             item.setTitle(R.string.pause);
             this.isPaused = false;
             this.stateLoaded = false;
+            metaioSDK.setTrackingConfiguration(defaultTrackingFile);
             mSurfaceView.queueEvent(new Runnable() {
                 @Override
                 public void run() {
@@ -487,97 +563,39 @@ public class PausableARELActivity extends CombinedCallbackActivity {
 
     }
 
+    private void createFuserLessTracking(String pathToProject) {
+        // take tracking config XML and convert to one that uses BestQualityFusers for every COS
+        try {
+            String AssetFolder = pathToProject + "/Assets";
+            defaultTrackingFile = AssetFolder + "/TrackingData_Marker.xml";
 
-    final class MetaioSDKCallbackHandler extends IMetaioSDKCallback {
+            File file = new File(defaultTrackingFile);
+            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+            Document doc = docBuilder.parse(file);
 
-
-        @Override
-        public void onCameraImageSaved(String filepath) {
-            super.onCameraImageSaved(filepath);
-        }
-
-        @Override
-        public void onSDKReady() {
-            super.onSDKReady();
-            Log.d("M-DEBUGTEST", "Custom callback created, SDK ready");
-        }
-
-        @Override
-        public void onNewCameraFrame(ImageStruct cameraFrame) {
-            MetaioDebug.log("a new camera frame image is delivered"
-                    + cameraFrame.getTimestamp());
-            Long currentTime = System.currentTimeMillis();
-            SimpleDateFormat formatter = new SimpleDateFormat(
-                    "yyyy-MM-dd-HH:mm:ss");
-            String currentTimestamp = formatter.format(new Date(currentTime));
-            final File toSave = new File(stateSavePath + currentTimestamp.toString() + ".jpg");
-
-
-            try {
-                if (!requestImageSave) {
-                    OutputStream fOutputStream = new FileOutputStream(tempPauseImage);
-
-                    cameraFrame.getBitmap().compress(Bitmap.CompressFormat.JPEG, 100, fOutputStream);
-
-                    fOutputStream.flush();
-                    fOutputStream.close();
-                } else {
-                    OutputStream fOutputStream = new FileOutputStream(toSave);
-
-                    cameraFrame.getBitmap().compress(Bitmap.CompressFormat.JPEG, 100, fOutputStream);
-
-                    fOutputStream.flush();
-                    fOutputStream.close();
-
-                    requestImageSave = false;
-
-                }
-
-
-                if (isPaused) {
-                    pauseItem.setEnabled(false);
-                    mSurfaceView.queueEvent(new LoadImageContinuousRunnable(tempPauseImage, 25));
-                }
-
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-        }
-    }
-
-    private class LoadImageContinuousRunnable implements Runnable {
-
-        private File file;
-        private int times;
-
-        LoadImageContinuousRunnable(File toLoad, int times) {
-            this.file = toLoad;
-            this.times = times;
-        }
-
-        @Override
-        public void run() {
-            if (times > 0) {
-                metaioSDK.setImage(file.getAbsolutePath());
-                uiHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        mSurfaceView.queueEvent(new LoadImageContinuousRunnable(file, --times));
-                    }
-                });
-            } else {
-                uiHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        pauseItem.setEnabled(true);
-                    }
-                });
+            // Change the content of node
+            NodeList nodes = doc.getElementsByTagName("Fuser");
+            for (int i = 0; i < nodes.getLength(); i++) {
+                Node current = nodes.item(i);
+                NamedNodeMap attr = current.getAttributes();
+                Attr newFuserType = doc.createAttribute("type");
+                newFuserType.setValue("BestQualityFuser");
+                Node success = attr.setNamedItem(newFuserType);
 
             }
+
+            Transformer transformer = TransformerFactory.newInstance().newTransformer();
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+
+            // initialize StreamResult with File object to save to file
+            noFuserTrackingFile = AssetFolder + "/TrackingData_NoSmoothing.xml";
+            StreamResult result = new StreamResult(noFuserTrackingFile);
+            DOMSource source = new DOMSource(doc);
+            transformer.transform(source, result);
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
-
-
 }
