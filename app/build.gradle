@@ -24,6 +24,6 @@ android {
 
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile project(':metaioSDK5')
+    compile project(':metaioSDK6')
     compile files('libs/commons-io-2.4.jar')
 }

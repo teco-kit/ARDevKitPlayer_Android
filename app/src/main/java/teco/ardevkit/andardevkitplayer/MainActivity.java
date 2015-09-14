@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 
+import com.metaio.sdk.ARELActivity;
 import com.metaio.sdk.MetaioDebug;
 import com.metaio.tools.io.AssetsManager;
 
@@ -124,10 +125,10 @@ public class MainActivity extends Activity {
 
             String newestProjectPath = projectFolder.getAbsolutePath() + "/" + projects[projects.length - 1];
 
-            final String arelConfigFilePath = newestProjectPath + "/arelConfig.xml";
+            final File arelConfigFilePath = new File(newestProjectPath + "/arelConfig.xml");
             MetaioDebug.log("arelConfig to be passed to intent: " + arelConfigFilePath);
             Intent intent = new Intent(getApplicationContext(), PausableARELActivity.class);
-            intent.putExtra(getPackageName() + ".AREL_SCENE", arelConfigFilePath);
+            intent.putExtra(getPackageName()+ ARELActivity.INTENT_EXTRA_AREL_SCENE, arelConfigFilePath);
             startActivity(intent);
 
 

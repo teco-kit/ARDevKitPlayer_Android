@@ -100,6 +100,7 @@ public class PausableARELActivity extends ARELActivity {
         stateSavePath = Environment.getExternalStorageDirectory()
                 + "/" + getResources().getString(R.string.app_name) + "/states/";
         tempPauseImage = new File(stateSavePath + "temp/pause.jpg");
+        tempPauseImage.mkdirs();
         setProgressBarVisibility(false);
         Log.d(log, "ARELViewActivity.onResume");
         if (udpThread == null) {
@@ -112,7 +113,7 @@ public class PausableARELActivity extends ARELActivity {
         }
         super.onResume();
 
-        String currentConfig = getIntent().getStringExtra(getPackageName() + INTENT_EXTRA_AREL_SCENE);
+        String currentConfig = ((File)getIntent().getSerializableExtra(getPackageName() + INTENT_EXTRA_AREL_SCENE)).getAbsolutePath();
         String currentProject = new File(currentConfig).getParent();
         createFuserLessTracking(currentProject);
 
@@ -161,7 +162,7 @@ public class PausableARELActivity extends ARELActivity {
             MediaScannerConnection.scanFile(getApplicationContext(), new String[]{oldestProjectFolder.getAbsolutePath()}, null, null);
         }
 
-        mARELInterpreter.loadARELFile(newsetProjectPath + "/arelConfig.xml");
+        mARELInterpreter.loadARELFile(new File(newsetProjectPath + "/arelConfig.xml"));
         createFuserLessTracking(newsetProjectPath);
 
 

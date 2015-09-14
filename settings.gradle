@@ -1,1 +1,2 @@
-include ':app', ':metaioSDK5'
+include ':app', ':metaioSDK6'
+project(':metaioSDK6').projectDir = new File('metaioSDK6_0_2')
